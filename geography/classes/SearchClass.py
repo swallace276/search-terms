@@ -119,11 +119,20 @@ class Search:
     def default_search(self):
         default_string = 'hlead(' + self.box_1_keys + ') and hlead(' + self.box_2_keys + ') and hlead(' + self.box_3_keys + ') and not hlead(' + self.box_4_keys + ')'
         return default_string
-    
+
+    def groundwater_search(self):
+        groundwater_keys = 'groundwater* OR aquifer* OR "ground water" OR spring* OR borehole OR "bore hole"'
+        groundwater_string = 'hlead(' + self.box_2_keys + ') and hlead(' + groundwater_keys + ') and not hlead(' + self.box_4_keys + ')'
+        return groundwater_string
+
     def _search_box(self):
         self.search_box = '#searchTerms' # css
         #self.search_box = "//input[@type='text' and @id='searchTerms']"
         
+        if self.basin_code == 'GRND':
+            search_string = self.groundwater_search()
+            print("performing groundwater search")
+
         if self.use_riparian: # if that "switch" in init has been flipped due to persistent download failure exception
             search_string = self.riparian_search()
             print("adding riparian country terms to search terms")
@@ -297,13 +306,19 @@ class Search:
         return False
 
     def switch_to_riparian(self):
-        """Flips the switch permanently"""
-        print("Switching to riparian search mode...")
-        self.use_riparian = True
-        # and then create a .txt file that's called 'riparian' and add it to the downloads/bcode folder, which we'll track in main sheet at completion
-        #riparian_txt = os.path.join(self.geography_folder, "data", "downloads", self.basin_code, "riparian_names_used.txt")
-        if not os.path.exists(self.riparian_txt):
-            os.makedirs(self.riparian_txt)
+        
+        if self.basin_code != 'GRND':
+            
+            """Flips the switch permanently"""
+            print("Switching to riparian search mode...")
+            self.use_riparian = True
+            # and then create a .txt file that's called 'riparian' and add it to the downloads/bcode folder, which we'll track in main sheet at completion
+            #riparian_txt = os.path.join(self.geography_folder, "data", "downloads", self.basin_code, "riparian_names_used.txt")
+            if not os.path.exists(self.riparian_txt):
+                os.makedirs(self.riparian_txt)
+        
+        else:
+            pass
     
     def search_process(self, start_date, end_date):
 
@@ -311,7 +326,6 @@ class Search:
         self._init_search()
         self._search_box()
         time.sleep(10)
-        # set date here
         startdate_field = "//input[@class='dateFrom' and @aria-label='From']"
         enddate_field = "//input[@class='dateTo' and @aria-label='To']"
 
