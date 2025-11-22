@@ -1,6 +1,6 @@
-from geography.classes.LoginClass import PasswordManager, WebDriverManager, Login
-from geography.classes.DownloadClass import Download, DownloadFailedException
-from geography.classes.SearchClass import Search
+from nexis_scraper.classes.LoginClass import PasswordManager, WebDriverManager, Login
+from nexis_scraper.classes.DownloadClass import Download, DownloadFailedException
+from nexis_scraper.classes.SearchClass import Search
 from selenium.common.exceptions import SessionNotCreatedException, TimeoutException, NoSuchElementException
 
 import os
@@ -21,15 +21,15 @@ _password_cache = None
 def get_user(basin_code, uname):
     # Use standard paths that work for any user
     base_path = os.path.expanduser("~")
-    geography_folder = "./"
+    nexis_scraper_folder = "./"
     download_folder_temp = os.path.join(base_path, "Downloads")
-    download_folder = os.path.join(geography_folder, "data", "downloads", basin_code)
+    download_folder = os.path.join(nexis_scraper_folder, "data", "downloads", basin_code)
     #download_folder = os.path.join(base_path, "Box", basin_code) # testing if we can download to Box drive from base path directly
 
     paths = {
         "base_path": base_path,
         "user_name": uname,
-        "geography_folder": geography_folder,
+        "nexis_scraper_folder": nexis_scraper_folder,
         "download_folder_temp": download_folder_temp,
         "download_folder": download_folder,
     }
@@ -111,7 +111,7 @@ def full_process(basin_code, username, paths):
     login._init_login()
 
     # Search process
-    search = Search(driver, basin_code, username, paths["geography_folder"])
+    search = Search(driver, basin_code, username, paths["nexis_scraper_folder"])
     search.search_process(start_date, end_date)  # Note: These variables need to be set at the top of utils, passed as parameters
 
 
@@ -203,7 +203,27 @@ def full_process(basin_code, username, paths):
                     #         r = updated_ranges[-1]  # Use the updated last range
                     
                     download.check_clear_downloads(r)
-                    download.download_dialog(r)
+                    try:
+                        download.download_dialog(r)
+                    except TimeoutException as te:
+                        print(f"[ERROR] TimeoutException in download_dialog for range {r}: {te}")
+                        # Save extra debug artifacts after timeout
+                        try:
+                            post_prefix = f"timeout_{basin_code}_{r}"
+                            download.driver.save_screenshot(os.path.join(download_folder, f"{post_prefix}.png"))
+                            with open(os.path.join(download_folder, f"{post_prefix}.html"), "w", encoding="utf-8") as f:
+                                f.write(download.driver.page_source)
+                        except Exception:
+                            pass
+                        raise  # let outer logic handle failures
+                    except Exception as e:
+                        print(f"[ERROR] Exception during download_dialog for range {r}: {e}")
+                        # optionally save debug snapshot
+                        try:
+                            download.driver.save_screenshot(os.path.join(download_folder, f"err_{basin_code}_{r}.png"))
+                        except Exception:
+                            pass
+                        raise
                     print(f"preparing to download range {r}")
 
                     download.wait_for_download()

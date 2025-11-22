@@ -9,7 +9,7 @@ The structure of this repository is as follows:
 - utils.py - the full process lives here
 - data folder
 - * downloads folder - contains downloaded results for each basin code
-- geography subfolder
+- nexis_scraper subfolder
 - * search_terms.xlsx - file with the search terms the script will use on Nexis Uni site
 - * classes folder - the main script will use the Python classes in this folder for different behavior, including logging in to Nexis Uni (LoginClass.py), the search process (SearchClass.py), downloading (DownloadClass.py), as well as file format conversions needed in the process
 

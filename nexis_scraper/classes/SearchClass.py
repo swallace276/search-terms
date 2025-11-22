@@ -11,23 +11,23 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, TimeoutException
 from selenium.webdriver.common.keys import Keys 
 
-#from geography.classes.DownloadClass import Download
+#from nexis_scraper.classes.DownloadClass import Download
 
 class Search:
-    def __init__(self, driver: webdriver, basin_code, username, geography_folder, timeout=20, url=None):
+    def __init__(self, driver: webdriver, basin_code, username, nexis_scraper_folder, timeout=20, url=None):
         self.driver = driver
         self.url = url
         self.timeout = timeout
         self.basin_code = basin_code
         self.username = username  # Consistent naming
-        self.geography_folder = geography_folder  # Now passed directly from paths
+        self.nexis_scraper_folder = nexis_scraper_folder  # Now passed directly from paths
 
         # this can manually be set to True if we want to try with narrower search terms/fewer results
         self.use_riparian = False # range count >500 will "flip this switch" to proceed with riparian country search
-        self.riparian_txt = os.path.join(self.geography_folder, "data", "downloads", self.basin_code, "riparian_names_used.txt")
+        self.riparian_txt = os.path.join(self.nexis_scraper_folder, "data", "downloads", self.basin_code, "riparian_names_used.txt")
 
         # Load tracking sheet - note the path might need adjustment
-        tracking_sheet = pd.read_excel(f'{self.geography_folder}geography/basins_searchterms_tracking.xlsx')
+        tracking_sheet = pd.read_excel(f'{self.nexis_scraper_folder}nexis_scraper/basins_searchterms_tracking.xlsx')
         
         self.row = tracking_sheet[tracking_sheet['BCODE'] == basin_code.upper()]
         self.search_term = self.row['Basin_Specific_Terms'].values[0]
@@ -313,7 +313,7 @@ class Search:
             print("Switching to riparian search mode...")
             self.use_riparian = True
             # and then create a .txt file that's called 'riparian' and add it to the downloads/bcode folder, which we'll track in main sheet at completion
-            #riparian_txt = os.path.join(self.geography_folder, "data", "downloads", self.basin_code, "riparian_names_used.txt")
+            #riparian_txt = os.path.join(self.nexis_scraper_folder, "data", "downloads", self.basin_code, "riparian_names_used.txt")
             if not os.path.exists(self.riparian_txt):
                 os.makedirs(self.riparian_txt)
         

@@ -529,41 +529,104 @@ class Download:
 
     # Moving dialog methods into Download class
     def download_dialog(self, r):
-        """Handle the download dialog process"""
-        open_download_options = "//button[@data-action='downloadopt' and @aria-label='Download']"
-        result_range_field = "//input[@id='SelectedRange']"
-
+        """Download dialog with multiple selector fallbacks and explicit state checks"""
+        
+        # Primary and fallback XPath/CSS selectors for the range input field
+        range_field_selectors = [
+            {"type": "xpath", "value": "//input[@id='SelectedRange']"},
+            {"type": "xpath", "value": "//input[@name='SelectedRange']"},
+            {"type": "css", "value": "input#SelectedRange"},
+            {"type": "css", "value": "input[name='SelectedRange']"},
+        ]
+        
+        # Primary and fallback selectors for download button
+        download_btn_selectors = [
+            {"type": "xpath", "value": "//button[@data-action='downloadopt' and @aria-label='Download']"},
+            {"type": "xpath", "value": "//button[@data-action='downloadopt']"},
+            {"type": "css", "value": "button[data-action='downloadopt']"},
+        ]
+        
+        # Wait for page readiness
         try:
-            time.sleep(10)
-            self._click_from_xpath(open_download_options)
-            time.sleep(2)
+            WebDriverWait(self.driver, 10).until(
+                lambda d: d.execute_script("return document.readyState") == "complete"
+            )
+        except TimeoutException:
+            print("[WARNING] Page did not reach 'complete' state; proceeding anyway")
+        
+        # Step 1: Find and click download button
+        download_btn = None
+        for selector in download_btn_selectors:
+            try:
+                by_type = By.XPATH if selector["type"] == "xpath" else By.CSS_SELECTOR
+                download_btn = WebDriverWait(self.driver, 10).until(
+                    EC.element_to_be_clickable((by_type, selector["value"]))
+                )
+                print(f"[DEBUG] Found download button using {selector['type']}: {selector['value']}")
+                break
+            except TimeoutException:
+                continue
+        
+        if not download_btn:
+            raise TimeoutException("Could not find download button with any selector")
+        
+        # Clear any overlays before clicking
+        self.handle_popups()
+        
+        # Click download button (with JS fallback)
+        try:
+            download_btn.click()
+        except (ElementClickInterceptedException, ElementNotInteractableException):
+            print("[DEBUG] Standard click failed, using JS click")
+            self.driver.execute_script("arguments[0].click();", download_btn)
+        
+        # Wait briefly for dialog to appear
+        import time
+        time.sleep(1)
+        
+        # Step 2: Find range input field with fallbacks
+        range_element = None
+        for selector in range_field_selectors:
+            try:
+                by_type = By.XPATH if selector["type"] == "xpath" else By.CSS_SELECTOR
+                range_element = WebDriverWait(self.driver, 10).until(
+                    EC.element_to_be_clickable((by_type, selector["value"]))
+                )
+                print(f"[DEBUG] Found range field using {selector['type']}: {selector['value']}")
+                break
+            except TimeoutException:
+                print(f"[DEBUG] Selector failed: {selector['value']}")
+                continue
+        
+        if not range_element:
+            # Debug info before failing
+            print(f"[ERROR] Could not find range input field for range {r}")
+            print(f"[DEBUG] Current URL: {self.driver.current_url}")
+            print(f"[DEBUG] Page title: {self.driver.title}")
+            try:
+                self.driver.save_screenshot(f"error_range_field_{r}.png")
+            except:
+                pass
+            raise TimeoutException(f"Range input field not found for range {r}")
+        
+        # Step 3: Ensure field is visible and clear it
+        self.driver.execute_script("arguments[0].scrollIntoView(true);", range_element)
+        time.sleep(0.5)
+        
+        # Clear field (triple-click + delete to ensure it's cleared)
+        try:
+            range_element.triple_click()
+        except:
+            range_element.send_keys(Keys.CONTROL + "a")
+        
+        range_element.send_keys(Keys.DELETE)
+        time.sleep(0.3)
+        
+        # Step 4: Enter the range
+        range_element.send_keys(str(r))
+        print(f"[DEBUG] Entered range {r}")
+        time.sleep(1)
 
-        except (ElementClickInterceptedException, StaleElementReferenceException):
-            max_retries = 3
-            for attempt in range(max_retries):
-                try:
-                    # check if we're in dialog box, looking for result range field
-                    WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.XPATH, result_range_field)))                        
-                    break  # Exit the loop if successful
-
-                except (NoSuchElementException, TimeoutException):
-                    if attempt < max_retries - 1:
-                        time.sleep(2)
-                        print(f"Attempt {attempt + 1} failed to open download window, retrying in 10 seconds")
-                        time.sleep(10)
-                        self._click_from_xpath(open_download_options)  # Try opening the download options again
-                        time.sleep(2)
-                    else:
-                        print(f"could not open dialog box, will skip range {r}")
-                        # this ight be a place to raise a +1 consecutive error flag
-                        raise DownloadFailedException
-                        
-
-        # enter range once we're in dialog box
-        range_element = self.driver.find_element(By.XPATH, result_range_field)
-        range_element.clear()
-        range_element.send_keys(r)
-        #self._send_keys_from_xpath(result_range_field, r) # ensure r is set somewhere
 
         # click MS word option
         MSWord_option = "//input[@type= 'radio' and @id= 'Docx']"
@@ -631,16 +694,16 @@ class Download:
             print("Download completed!")
             # Use the first matching file
             default_download_path = os.path.join(self.download_folder_temp, default_filename[0])
-            geography_download_path = os.path.join(self.download_folder, f"{self.basin_code}_results_{r}.ZIP")
+            nexis_scraper_download_path = os.path.join(self.download_folder, f"{self.basin_code}_results_{r}.ZIP")
 
             # Check if file exists and move it
             if os.path.isfile(default_download_path):
-                os.rename(default_download_path, geography_download_path)
-                print(f"moving file to {geography_download_path}")
+                os.rename(default_download_path, nexis_scraper_download_path)
+                print(f"moving file to {nexis_scraper_download_path}")
 
                 
             # Wait for Box Drive to sync the file
-            # self.wait_for_box_sync(geography_download_path)
+            # self.wait_for_box_sync(nexis_scraper_download_path)
 
         else:
             print(f"file containing range {r} was not downloaded")
