@@ -457,8 +457,8 @@ class Download:
         full_count = self.get_result_count() 
         #print(f"DEBUG: get_result_count() returned: {full_count}")
         
-        # hard-coding limit of 500 to it because that's the nexis uni limit for word full text
-        download_limit = 500 
+        # hard-coding limit (500 for full text, 1000 for results list)
+        download_limit = 1000 
 
         # this generates a list of ranges that will be used in the download dialog box
         ranges = []
@@ -530,13 +530,14 @@ class Download:
     # Moving dialog methods into Download class
     def download_dialog(self, r):
         """Download dialog with multiple selector fallbacks and explicit state checks"""
-        
+
         # Primary and fallback XPath/CSS selectors for the range input field
         range_field_selectors = [
             {"type": "xpath", "value": "//input[@id='SelectedRange']"},
             {"type": "xpath", "value": "//input[@name='SelectedRange']"},
             {"type": "css", "value": "input#SelectedRange"},
             {"type": "css", "value": "input[name='SelectedRange']"},
+            {"type": "css", "value" : "input[type='text'][id='SelectedRange']"}
         ]
         
         # Primary and fallback selectors for download button
@@ -583,8 +584,13 @@ class Download:
         # Wait briefly for dialog to appear
         import time
         time.sleep(1)
-        
-        # Step 2: Find range input field with fallbacks
+
+        # click Results List option
+        print("trying to click Results List option first")
+        resultslist_option = "//input[@type= 'radio' and @id= 'ResultsListOnly']"
+        self._click_from_xpath(resultslist_option)
+        time.sleep(3)
+                    
         range_element = None
         for selector in range_field_selectors:
             try:
@@ -597,43 +603,49 @@ class Download:
             except TimeoutException:
                 print(f"[DEBUG] Selector failed: {selector['value']}")
                 continue
-        
-        if not range_element:
-            # Debug info before failing
-            print(f"[ERROR] Could not find range input field for range {r}")
-            print(f"[DEBUG] Current URL: {self.driver.current_url}")
-            print(f"[DEBUG] Page title: {self.driver.title}")
-            try:
-                self.driver.save_screenshot(f"error_range_field_{r}.png")
-            except:
-                pass
-            raise TimeoutException(f"Range input field not found for range {r}")
-        
-        # Step 3: Ensure field is visible and clear it
-        self.driver.execute_script("arguments[0].scrollIntoView(true);", range_element)
-        time.sleep(0.5)
-        
-        # Clear field (triple-click + delete to ensure it's cleared)
-        try:
-            range_element.triple_click()
-        except:
-            range_element.send_keys(Keys.CONTROL + "a")
-        
-        range_element.send_keys(Keys.DELETE)
-        time.sleep(0.3)
-        
-        # Step 4: Enter the range
-        range_element.send_keys(str(r))
-        print(f"[DEBUG] Entered range {r}")
-        time.sleep(1)
 
+        if not range_element:
+            # Step 3: Ensure field is visible and clear it
+            # self.driver.execute_script("arguments[0].scrollIntoView(true);", range_element)
+            # time.sleep(0.5)
+            
+            # # Clear field (triple-click + delete to ensure it's cleared)
+            # try:
+            #     range_element.triple_click()
+            # except:
+            #     range_element.send_keys(Keys.CONTROL + "a")
+            
+            # range_element.send_keys(Keys.DELETE)
+            # time.sleep(0.3)
+            
+            # # Step 4: Enter the range
+            # range_element.send_keys(str(r))
+            # print(f"[DEBUG] Entered range {r}")
+            # time.sleep(1)
+            raise TimeoutException("Range input not found")
+
+        # Try to focus/clear/send keys
+        try:
+            range_element.click()
+            range_element.clear()
+            range_element.send_keys(str(r))
+        except Exception:
+            # fallback - set value using JS and dispatch input event so frameworks pick it up
+            self.driver.execute_script(
+                "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('input'));",
+                range_element, str(r)
+            )
+
+        # click excel option
+        excel_option = "//input[@type= 'radio' and @id= 'XLSX']"
+        self._click_from_xpath(excel_option)
 
         # click MS word option
-        MSWord_option = "//input[@type= 'radio' and @id= 'Docx']"
-        self._click_from_xpath(MSWord_option)
+        #MSWord_option = "//input[@type= 'radio' and @id= 'Docx']"
+        #self._click_from_xpath(MSWord_option)
 
-        separate_files_option = "//input[@type= 'radio' and @id= 'SeparateFiles']"
-        self._click_from_xpath(separate_files_option)
+        #separate_files_option = "//input[@type= 'radio' and @id= 'SeparateFiles']"
+        #self._click_from_xpath(separate_files_option)
 
         # click on download
         download_button = "//button[@type='submit' and @class='button primary' and @data-action='download']"

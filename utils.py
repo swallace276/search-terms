@@ -13,8 +13,8 @@ from pathlib import Path
 
 import download_driver
 
-start_date = '06/30/2008'
-end_date = '04/30/2025'
+start_date = '01/01/2000'
+end_date = '06/30/2008'
 
 _password_cache = None
 
