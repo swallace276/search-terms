@@ -24,13 +24,20 @@ class Search:
 
         # this can manually be set to True if we want to try with narrower search terms/fewer results
         self.use_riparian = False # range count >500 will "flip this switch" to proceed with riparian country search
-        self.riparian_txt = os.path.join(self.nexis_scraper_folder, "data", "downloads", self.basin_code, "riparian_names_used.txt")
+        self.riparian_txt = os.path.join(self.nexis_scraper_folder, "Data", "Downloads", self.basin_code, "riparian_names_used.txt")
 
-        # Load tracking sheet - note the path might need adjustment
-        tracking_sheet = pd.read_excel(f'{self.nexis_scraper_folder}nexis_scraper/basins_searchterms_tracking.xlsx')
+        # Load tracking sheet - note the path might need 
+        searchterms_sheet_file = 'single_event_basins.csv'
+        tracking_sheet = pd.read_csv(os.path.join(self.nexis_scraper_folder, "Data", searchterms_sheet_file))
         
         self.row = tracking_sheet[tracking_sheet['BCODE'] == basin_code.upper()]
-        self.search_term = self.row['Basin_Specific_Terms'].values[0]
+        self.search_term = self.row['old_terms'].values[0] # this may change
+        search_year = self.row['YEAR'].values[0] 
+        start_year = int(search_year) - 2  
+        end_year = int(search_year) + 2  # which will give us a 5-year range
+        self.start_date = f'01/01/{start_year}'
+        self.end_date = f'12/31/{end_year}'
+
 
         # search keys
         self.box_1_keys = 'water* OR river* OR lake* OR dam* OR stream OR streams OR tributar* OR irrigat* OR flood* OR drought* OR canal* OR hydroelect* OR reservoir* OR groundwater* OR aquifer* OR riparian* OR pond* OR wadi* OR creek* OR oas*s OR spring*'
@@ -320,7 +327,7 @@ class Search:
         else:
             pass
     
-    def search_process(self, start_date, end_date):
+    def search_process(self):
 
         self.NexisHome()
         self._init_search()
@@ -336,10 +343,10 @@ class Search:
             select_all = Keys.CONTROL, "a"
 
         self._send_keys_from_xpath(startdate_field, select_all)
-        self._send_keys_from_xpath(startdate_field, start_date)
+        self._send_keys_from_xpath(startdate_field, self.start_date)
 
         self._send_keys_from_xpath(enddate_field, select_all)
-        self._send_keys_from_xpath(enddate_field, end_date)
+        self._send_keys_from_xpath(enddate_field, self.end_date)
 
         #continue
         self.complete_search()

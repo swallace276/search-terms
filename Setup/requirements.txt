@@ -8,3 +8,5 @@ openpyxl
 tqdm
 jupyter 
 streamlit 
+matplotlib
+xlrd

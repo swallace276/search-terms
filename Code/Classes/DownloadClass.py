@@ -24,8 +24,8 @@ import sys
 import os
 import re
 
-from classes.LoginClass import Login
-from classes.SearchClass import Search
+from .LoginClass import Login
+from .SearchClass import Search
 
 
 class DownloadFailedException(Exception):
@@ -590,7 +590,14 @@ class Download:
         resultslist_option = "//input[@type= 'radio' and @id= 'ResultsListOnly']"
         self._click_from_xpath(resultslist_option)
         time.sleep(3)
-                    
+
+                
+        self.driver.find_element(By.CSS_SELECTOR, ".nested:nth-child(3) #SelectedRange").click()
+        time.sleep(4)
+        self.driver.find_element(By.CSS_SELECTOR, ".nested:nth-child(3) #SelectedRange").send_keys(r)
+        time.sleep(8)
+
+        '''            
         range_element = None
         for selector in range_field_selectors:
             try:
@@ -634,11 +641,11 @@ class Download:
             self.driver.execute_script(
                 "arguments[0].value = arguments[1]; arguments[0].dispatchEvent(new Event('input'));",
                 range_element, str(r)
-            )
+            ) '''
 
         # click excel option
         excel_option = "//input[@type= 'radio' and @id= 'XLSX']"
-        self._click_from_xpath(excel_option)
+        self._click_from_xpath(excel_option) 
 
         # click MS word option
         #MSWord_option = "//input[@type= 'radio' and @id= 'Docx']"
@@ -698,28 +705,30 @@ class Download:
             raise  # Re-raise the unexpected exception
 
     
-    def move_file(self, r):
-        # Find matching file
-        default_filename = [f for f in os.listdir(self.download_folder_temp) if re.match(r"Files \(\d+\)\.ZIP", f)]
+def move_file(self, r):
+    # Find matching files
+    matching_files = [f for f in os.listdir(self.download_folder_temp) 
+                      if "Results list for" in f and f.endswith('.ZIP')]
 
-        if default_filename:  # If we found any matching files
-            print("Download completed!")
-            # Use the first matching file
-            default_download_path = os.path.join(self.download_folder_temp, default_filename[0])
-            nexis_scraper_download_path = os.path.join(self.download_folder, f"{self.basin_code}_results_{r}.ZIP")
+    if matching_files:
+        # Get the newest file by modification time
+        newest_file = max(matching_files, 
+                         key=lambda f: os.path.getmtime(os.path.join(self.download_folder_temp, f)))
+        
+        print("Download completed!")
+        default_download_path = os.path.join(self.download_folder_temp, newest_file)
+        nexis_scraper_download_path = os.path.join(self.download_folder, f"{self.basin_code}_results_{r}.ZIP")
 
-            # Check if file exists and move it
-            if os.path.isfile(default_download_path):
-                os.rename(default_download_path, nexis_scraper_download_path)
-                print(f"moving file to {nexis_scraper_download_path}")
-
-                
-            # Wait for Box Drive to sync the file
-            # self.wait_for_box_sync(nexis_scraper_download_path)
-
+        # Move the file
+        if os.path.isfile(default_download_path):
+            os.rename(default_download_path, nexis_scraper_download_path)
+            print(f"moving file to {nexis_scraper_download_path}")
         else:
             print(f"file containing range {r} was not downloaded")
             raise DownloadFailedException
+    else:
+        print(f"file containing range {r} was not downloaded")
+        raise DownloadFailedException
 
     def wait_for_box_sync(self, file_path, max_wait=30):
         """Wait for file to be fully synced to Box Drive"""

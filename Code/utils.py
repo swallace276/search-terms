@@ -1,9 +1,7 @@
-from nexis_scraper.classes.LoginClass import PasswordManager, WebDriverManager, Login
-from nexis_scraper.classes.DownloadClass import Download, DownloadFailedException
-from nexis_scraper.classes.SearchClass import Search
 from selenium.common.exceptions import SessionNotCreatedException, TimeoutException, NoSuchElementException
 
 import os
+import sys
 import shutil
 import time
 import re
@@ -11,19 +9,30 @@ from tqdm import tqdm
 import datetime
 from pathlib import Path
 
-import download_driver
+# Add Code directory to path so we can import Classes
+code_dir = os.path.dirname(os.path.abspath(__file__))
+if code_dir not in sys.path:
+    sys.path.insert(0, code_dir)
 
-start_date = '01/01/2000'
-end_date = '06/30/2008'
+# Add repo root to path so we can import Setup
+repo_root = os.path.abspath(os.path.join(code_dir, ".."))
+if repo_root not in sys.path:
+    sys.path.insert(0, repo_root)
+
+from Classes.LoginClass import PasswordManager, WebDriverManager, Login
+from Classes.DownloadClass import Download, DownloadFailedException
+from Classes.SearchClass import Search
+from Setup import download_driver
 
 _password_cache = None
 
 def get_user(basin_code, uname):
     # Use standard paths that work for any user
     base_path = os.path.expanduser("~")
-    nexis_scraper_folder = "./"
+    # Get repo root (one level up from Code/)
+    nexis_scraper_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     download_folder_temp = os.path.join(base_path, "Downloads")
-    download_folder = os.path.join(nexis_scraper_folder, "data", "downloads", basin_code)
+    download_folder = os.path.join(nexis_scraper_folder, "Data", "Downloads", basin_code)
     #download_folder = os.path.join(base_path, "Box", basin_code) # testing if we can download to Box drive from base path directly
 
     paths = {
@@ -52,7 +61,7 @@ def reset(download, login, search):
     logout_clearcookies(download)
     time.sleep(3)
     login._init_login()
-    search.search_process(start_date, end_date)
+    search.search_process()
     time.sleep(5)
     download.DownloadSetup()
 
@@ -112,7 +121,7 @@ def full_process(basin_code, username, paths):
 
     # Search process
     search = Search(driver, basin_code, username, paths["nexis_scraper_folder"])
-    search.search_process(start_date, end_date)  # Note: These variables need to be set at the top of utils, passed as parameters
+    search.search_process()  
 
 
     # Download setup - streamlined parameters
