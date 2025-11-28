@@ -50,8 +50,10 @@ class WebDriverManager:
         self.options = ChromeOptions()
         self.setup_options()
         
-        # Use consistent path handling
-        self.driver_dir = Path("./chromedriver")
+        # Use consistent path handling - look for chromedriver in Setup folder
+        # Get repo root (two levels up from Code/Classes/)
+        repo_root = Path(__file__).parent.parent.parent
+        self.driver_dir = repo_root / "Setup" / "chromedriver"
         chromedriver_name = "chromedriver.exe" if sys.platform.startswith("win") else "chromedriver"
         self.driver_path = self.driver_dir / chromedriver_name
         

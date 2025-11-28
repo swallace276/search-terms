@@ -135,7 +135,9 @@ def download_chromedriver(chrome_version: str, platform_name: str, arch: str) ->
             
         download_url = download_info['url']
 
-        driver_dir = Path("./chromedriver")
+        # Get repo root (one level up from Setup/)
+        repo_root = Path(__file__).parent.parent
+        driver_dir = repo_root / "Setup" / "chromedriver"
         driver_dir.mkdir(exist_ok=True)
 
         # Clean up existing ChromeDriver files

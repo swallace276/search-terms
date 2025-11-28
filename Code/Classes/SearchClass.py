@@ -24,10 +24,10 @@ class Search:
 
         # this can manually be set to True if we want to try with narrower search terms/fewer results
         self.use_riparian = False # range count >500 will "flip this switch" to proceed with riparian country search
-        self.riparian_txt = os.path.join(self.nexis_scraper_folder, "data", "downloads", self.basin_code, "riparian_names_used.txt")
+        self.riparian_txt = os.path.join(self.nexis_scraper_folder, "Data", "Downloads", self.basin_code, "riparian_names_used.txt")
 
         # Load tracking sheet - note the path might need adjustment
-        tracking_sheet = pd.read_excel(f'{self.nexis_scraper_folder}nexis_scraper/basins_searchterms_tracking.xlsx')
+        tracking_sheet = pd.read_excel(os.path.join(self.nexis_scraper_folder, "Data", "basins_searchterms_tracking.xlsx"))
         
         self.row = tracking_sheet[tracking_sheet['BCODE'] == basin_code.upper()]
         self.search_term = self.row['Basin_Specific_Terms'].values[0]
