@@ -162,7 +162,8 @@ cython_debug/
 #.idea/
 
 # contents of downloads folder
-data
+#downloads
+Data/single_event_basins_with_notes.csv
 
 # converted status sheets
 fromBox
@@ -182,3 +183,5 @@ geo_env
 
 ./chromedriver_temp
 ./chromedriver
+
+

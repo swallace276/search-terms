@@ -14,7 +14,7 @@ from selenium.webdriver.common.keys import Keys
 #from nexis_scraper.classes.DownloadClass import Download
 
 class Search:
-    def __init__(self, driver: webdriver, basin_code, username, nexis_scraper_folder, timeout=20, url=None):
+    def __init__(self, driver: webdriver, basin_code, username, nexis_scraper_folder, timeout=20, url=None, use_new_search=True):
         self.driver = driver
         self.url = url
         self.timeout = timeout
@@ -31,12 +31,15 @@ class Search:
         tracking_sheet = pd.read_csv(os.path.join(self.nexis_scraper_folder, "Data", searchterms_sheet_file))
         
         self.row = tracking_sheet[tracking_sheet['BCODE'] == basin_code.upper()]
-        self.search_term = self.row['old_terms'].values[0] # this may change
-        search_year = self.row['YEAR'].values[0] 
-        start_year = int(search_year) - 2  
-        end_year = int(search_year) + 2  # which will give us a 5-year range
-        self.start_date = f'01/01/{start_year}'
-        self.end_date = f'12/31/{end_year}'
+        if use_new_search:
+            self.search_term = self.row['new_terms'].values[0]
+        else:
+            self.search_term = self.row['old_terms'].values[0]
+        search_year = self.row['YEAR'].values[0] # using just this year will give us a 1-year range
+        #start_year = int(search_year) - 2  # can increase it if there are too few results
+        #end_year = int(search_year) + 2  # which will give us a 5-year range
+        self.start_date = f'01/01/{search_year}'
+        self.end_date = f'12/31/{search_year}'
 
 
         # search keys

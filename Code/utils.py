@@ -26,13 +26,14 @@ from Setup import download_driver
 
 _password_cache = None
 
-def get_user(basin_code, uname):
+def get_user(basin_code, uname, use_new_search=True):
     # Use standard paths that work for any user
     base_path = os.path.expanduser("~")
     # Get repo root (one level up from Code/)
     nexis_scraper_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     download_folder_temp = os.path.join(base_path, "Downloads")
-    download_folder = os.path.join(nexis_scraper_folder, "Data", "Downloads", basin_code)
+    protocol_folder = "new_search" if use_new_search else "old_search"
+    download_folder = os.path.join(nexis_scraper_folder, "Data", "Downloads", basin_code, protocol_folder)
     #download_folder = os.path.join(base_path, "Box", basin_code) # testing if we can download to Box drive from base path directly
 
     paths = {
@@ -40,7 +41,8 @@ def get_user(basin_code, uname):
         "user_name": uname,
         "nexis_scraper_folder": nexis_scraper_folder,
         "download_folder_temp": download_folder_temp,
-        "download_folder": download_folder,
+        "download_folder": download_folder, 
+        "protocol": protocol_folder,  # Optional: useful for logging
     }
     
     return paths, uname
@@ -65,7 +67,7 @@ def reset(download, login, search):
     time.sleep(5)
     download.DownloadSetup()
 
-def full_process(basin_code, username, paths):
+def full_process(basin_code, username, paths, use_new_search=True):
     """
     Main download process function.
     
@@ -73,6 +75,10 @@ def full_process(basin_code, username, paths):
         basin_code (str): The basin code for the geographic area
         username (str): Username from streamlit input
         paths (dict): Dictionary containing file paths
+        use_new_search (bool): Whether to use new or old search protocol
+        
+    Returns:
+        bool: True if download completed successfully, False otherwise
     """
     print("~" * 27)
     print(f"Starting download for {basin_code}!")
@@ -90,7 +96,6 @@ def full_process(basin_code, username, paths):
     
     # Password management
     global _password_cache
-
     if _password_cache is None:
         pm = PasswordManager()
         if not pm.password:
@@ -120,7 +125,7 @@ def full_process(basin_code, username, paths):
     login._init_login()
 
     # Search process
-    search = Search(driver, basin_code, username, paths["nexis_scraper_folder"])
+    search = Search(driver, basin_code, username, paths["nexis_scraper_folder"], use_new_search=use_new_search)
     search.search_process()  
 
 
@@ -149,20 +154,30 @@ def full_process(basin_code, username, paths):
             if not os.path.exists(zero_txt):
                 os.makedirs(zero_txt)
             print(f"Zero results to download for basin {basin_code}")
+            logout_clearcookies(download)
+            driver.close()
+            return False  # Failed - no results
 
     # Main download process
     before = time.time()
 
-    if download.get_result_count is None:
+    result_count = download.get_result_count()
+    if result_count is None:
         logout_clearcookies(download)
         driver.close()
-        return
+        return False  # Failed - no results
 
-    if download.get_result_count() > 150000 and not getattr(search, 'already_switched_to_riparian', False):
-        search.switch_to_riparian()
-        search.already_switched_to_riparian = True  # Prevent re-switching
-        search.search_process(start_date, end_date)
-        download.DownloadSetup()
+    if result_count > 1000:
+        print(f"Basin {basin_code} has {result_count} results (over 1000 limit). Skipping...")
+        logout_clearcookies(download)
+        driver.close()
+        return False
+
+    # if download.get_result_count() > 150000 and not getattr(search, 'already_switched_to_riparian', False):
+    #     search.switch_to_riparian()
+    #     search.already_switched_to_riparian = True  # Prevent re-switching
+    #     search.search_process()
+    #     download.DownloadSetup()
 
     consecutive_failures = 0
     failure_threshold = 3 # can raise or lower
@@ -172,6 +187,8 @@ def full_process(basin_code, username, paths):
     initial_ranges = download.get_ranges()
     total_ranges = len(initial_ranges)
     completed_ranges = set()
+    
+    success = False  # Track overall success
 
     # creae persisitent progress bar outside while loop
     with tqdm(total=total_ranges, desc=f"Overall Progress on {basin_code}") as pbar:
@@ -186,30 +203,15 @@ def full_process(basin_code, username, paths):
                 logout_clearcookies(download)
                 driver.close()
                 running = False
+                success = True  # Mark as successful
                 break
             
             print(f"Attempting to download {len(ranges_to_download)} ranges")
-
-            # if consecutive_failures == failure_threshold: # for now change what happens when it fails. do not switch search method.
-            #     # print(f"Too many consecutive failures ({consecutive_failures}), switching search method...")
-            #     print(f"{basin_code} downloads failed {failure_threshold} times in a row, please try another basin")
-            #     logout_clearcookies(download)
-            #     driver.close() # now it will just stop
-            #     #in_progress_download_folder = f"{download_folder}_failed_in_progress"
-            #     #os.rename(download_folder, in_progress_download_folder) # add a label to indicate downloads are not complete for this basin
-            #     running=False
 
             for i, r in enumerate(ranges_to_download):
                 try:
                     if i > 0: # if it's not the first loop
                         reset(download, login, search) # reset, which includes login, search, and setup
-
-                    # if i == len(ranges_to_download) - 1:  # if it's the last loop
-                    #     print("Re-checking ranges before final download...")
-                    #     updated_ranges = download.get_ranges()
-                    #     if updated_ranges and r != updated_ranges[-1]:
-                    #         print(f"Last range updated from {r} to {updated_ranges[-1]}")
-                    #         r = updated_ranges[-1]  # Use the updated last range
                     
                     download.check_clear_downloads(r)
                     try:
@@ -256,14 +258,14 @@ def full_process(basin_code, username, paths):
                     consecutive_failures += 1
                     print(f"Download failed for range {r} after {consecutive_failures} consecutive failure(s)")
                     reset(download, login, search)
-                    #logout_clearcookies(download)
                     
                     # Check if we've hit the failure threshold
                     if consecutive_failures >= failure_threshold:
                         print(f"{basin_code} downloads failed {failure_threshold} times in a row, please try another basin")
-                        logout_clearcookies(download)  # You might already have done this above
+                        logout_clearcookies(download)
                         driver.close()
                         running = False
+                        success = False  # Mark as failed
                         break
 
                     continue  # Try the next range
@@ -271,14 +273,5 @@ def full_process(basin_code, username, paths):
                 except Exception as e:
                     #print(f"Error occurred with range {r}: {e}")
                     continue  # Try next range
-        
-            
-    # finally:
-    #     ranges_to_download = RangesDownload.get_ranges(download, download_folder) # run this again when loop is complete
-
-    #     # get_ranges() will return not_downloaded_ranges as a list
-    #     if not ranges_to_download:
-    #         print("all ranges for basin downloaded")
-    #     else:
-    #         print("ranges remaining:")
-    #         print(ranges_to_download)
+    
+    return success  # Return whether download was successful

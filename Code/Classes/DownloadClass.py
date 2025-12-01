@@ -705,46 +705,46 @@ class Download:
             raise  # Re-raise the unexpected exception
 
     
-def move_file(self, r):
-    # Find matching files
-    matching_files = [f for f in os.listdir(self.download_folder_temp) 
-                      if "Results list for" in f and f.endswith('.ZIP')]
+    def move_file(self, r):
+        # Find matching files
+        matching_files = [f for f in os.listdir(self.download_folder_temp) 
+                        if "Results list for" in f and f.endswith('.ZIP')]
 
-    if matching_files:
-        # Get the newest file by modification time
-        newest_file = max(matching_files, 
-                         key=lambda f: os.path.getmtime(os.path.join(self.download_folder_temp, f)))
-        
-        print("Download completed!")
-        default_download_path = os.path.join(self.download_folder_temp, newest_file)
-        nexis_scraper_download_path = os.path.join(self.download_folder, f"{self.basin_code}_results_{r}.ZIP")
+        if matching_files:
+            # Get the newest file by modification time
+            newest_file = max(matching_files, 
+                            key=lambda f: os.path.getmtime(os.path.join(self.download_folder_temp, f)))
+            
+            print("Download completed!")
+            default_download_path = os.path.join(self.download_folder_temp, newest_file)
+            nexis_scraper_download_path = os.path.join(self.download_folder, f"{self.basin_code}_resultslist_{r}.ZIP")
 
-        # Move the file
-        if os.path.isfile(default_download_path):
-            os.rename(default_download_path, nexis_scraper_download_path)
-            print(f"moving file to {nexis_scraper_download_path}")
+            # Move the file
+            if os.path.isfile(default_download_path):
+                os.rename(default_download_path, nexis_scraper_download_path)
+                print(f"moving file to {nexis_scraper_download_path}")
+            else:
+                print(f"file containing range {r} was not downloaded")
+                raise DownloadFailedException
         else:
             print(f"file containing range {r} was not downloaded")
             raise DownloadFailedException
-    else:
-        print(f"file containing range {r} was not downloaded")
-        raise DownloadFailedException
 
-    def wait_for_box_sync(self, file_path, max_wait=30):
-        """Wait for file to be fully synced to Box Drive"""
-        print("Waiting for Box Drive sync...")
-        start_time = time.time()
+    # def wait_for_box_sync(self, file_path, max_wait=30):
+    #     """Wait for file to be fully synced to Box Drive"""
+    #     print("Waiting for Box Drive sync...")
+    #     start_time = time.time()
         
-        while time.time() - start_time < max_wait:
-            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
-                # File exists and has content, likely synced
-                time.sleep(2)  # Small buffer for sync completion
-                print("File synced to Box Drive!")
-                return True
-            time.sleep(1)
+    #     while time.time() - start_time < max_wait:
+    #         if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+    #             # File exists and has content, likely synced
+    #             time.sleep(2)  # Small buffer for sync completion
+    #             print("File synced to Box Drive!")
+    #             return True
+    #         time.sleep(1)
         
-        print("Warning: Box sync may not be complete")
-        return False
+    #     print("Warning: Box sync may not be complete")
+    #     return False
 
 
     def check_clear_downloads(self, r):
