@@ -11,7 +11,7 @@ __pycache__/
 build/
 develop-eggs/
 dist/
-downloads/
+#downloads/
 eggs/
 .eggs/
 lib/
@@ -171,12 +171,11 @@ fromBox
 #notes
 notes
 
-notebooks
+#notebooks
 
 chromedriver
 chrome-mac-x64
 chromedriver_temp_chrome-mac-x64.zip
-geo_env
 
 .DS_Store
 
@@ -184,4 +183,7 @@ geo_env
 ./chromedriver_temp
 ./chromedriver
 
-
+# figs to generate
+Figs/Fig_1_BAR_Scale_Distribution.png 
+Figs/Fig_2_Basin_Frequency_Distribution.png 
+Figs/Fig_3_Riparian_Countries_vs_Events.png

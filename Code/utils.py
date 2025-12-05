@@ -167,11 +167,11 @@ def full_process(basin_code, username, paths, use_new_search=True):
         driver.close()
         return False  # Failed - no results
 
-    if result_count > 1000:
-        print(f"Basin {basin_code} has {result_count} results (over 1000 limit). Skipping...")
-        logout_clearcookies(download)
-        driver.close()
-        return False
+    # if result_count > 1000:
+    #     print(f"Basin {basin_code} has {result_count} results (over 1000 limit). Skipping...")
+    #     logout_clearcookies(download)
+    #     driver.close()
+    #     return False
 
     # if download.get_result_count() > 150000 and not getattr(search, 'already_switched_to_riparian', False):
     #     search.switch_to_riparian()

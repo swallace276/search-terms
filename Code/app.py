@@ -42,8 +42,8 @@ csv_path = None
 if use_event_list:
     # Default CSV path
     default_csv = str(repo_root / "Data" / "single_event_basins.csv")
-    csv_path_input = st.text_input("Path to CSV file:", value=default_csv)
-    basin_column = st.text_input("Column name for basins:", value="BCODE")
+    csv_path_input = default_csv
+    basin_column = "BCODE"
     
     if os.path.exists(csv_path_input):
         try:
